@@ -1,0 +1,41 @@
+node_modules/
+dist/
+.runtime/
+.playwright-cli/
+.gitnexus/
+.claude/
+.env.local
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo
+
+# Local editor and operating-system files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Android machine-specific and generated files
+android-tracker/.gradle/
+android-tracker/**/build/
+android-tracker/local.properties
+
+# ws-scrcpy local database and connection state
+scripts/*.db
+scripts/*.db-shm
+scripts/*.db-wal
+
+# QA screenshots and local design exploration; keep only the installable APK
+output/*
+!output/MotionCast-Tracker-debug.apk
+design-comparison*.png
+design-implementation*.png
+design-audit*.md
+pose-tracking-analysis.md
+
+# Unrelated workspace notes and local agent configuration
+docs/
+AGENTS.md
+CLAUDE.md

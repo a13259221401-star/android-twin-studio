@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/app_background">
+
+    <FrameLayout
+        android:id="@+id/ar_surface_container"
+        android:layout_width="2dp"
+        android:layout_height="2dp"
+        android:layout_gravity="bottom|end"
+        android:alpha="0.01" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingLeft="20dp"
+            android:paddingTop="26dp"
+            android:paddingRight="20dp"
+            android:paddingBottom="30dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="MOTIONCAST TRACKER"
+                android:textColor="@color/blue"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.18" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="实时姿态控制台"
+                android:textColor="@color/text_primary"
+                android:textSize="30sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/connection_summary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="正在连接电脑姿态通道…"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/scan_button"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="18dp"
+                android:background="@drawable/primary_button"
+                android:text="扫码连接电脑"
+                android:textAllCaps="false"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/card_background"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="一体化实时投屏"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/screen_share_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="7dp"
+                    android:text="扫码后自动请求屏幕录制权限"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/screen_share_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:layout_marginTop="13dp"
+                    android:background="@drawable/secondary_button"
+                    android:text="开始实时投屏"
+                    android:textAllCaps="false"
+                    android:textColor="@color/blue" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/card_background"
+                android:orientation="vertical">
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="追踪状态" android:textColor="@color/text_secondary" android:textSize="12sp" />
+                    <TextView android:id="@+id/tracking_mode" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="SENSOR 3DOF" android:textColor="@color/green" android:textSize="12sp" android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView android:id="@+id/tracking_state" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="● TRACKING" android:textColor="@color/green" android:textSize="26sp" android:textStyle="bold" />
+                <TextView android:id="@+id/sample_rate" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="姿态采样 30 Hz" android:textColor="@color/text_secondary" android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/card_background"
+                android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="相对位置 / POSITION" android:textColor="@color/text_secondary" android:textSize="11sp" />
+                <TextView android:id="@+id/position_value" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:fontFamily="monospace" android:text="X  +0.000   Y  +0.000   Z  +0.000" android:textColor="@color/text_primary" android:textSize="15sp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:text="旋转四元数 / QUATERNION" android:textColor="@color/text_secondary" android:textSize="11sp" />
+                <TextView android:id="@+id/rotation_value" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:fontFamily="monospace" android:text="QX +0.000  QY +0.000\nQZ +0.000  QW +1.000" android:textColor="@color/text_primary" android:textSize="15sp" android:lineSpacingExtra="6dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/card_background"
+                android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="设备能力" android:textColor="@color/text_primary" android:textSize="15sp" android:textStyle="bold" />
+                <TextView android:id="@+id/sensor_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="✓ Rotation Vector\n✓ Gyroscope\n✓ Accelerometer" android:textColor="@color/text_secondary" android:textSize="13sp" android:lineSpacingExtra="6dp" />
+                <TextView android:id="@+id/arcore_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="ARCore：正在检测" android:textColor="@color/blue" android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="horizontal">
+                <Button android:id="@+id/calibrate_button" android:layout_width="0dp" android:layout_height="54dp" android:layout_weight="1" android:layout_marginRight="6dp" android:background="@drawable/secondary_button" android:text="校准零点" android:textAllCaps="false" android:textColor="@color/text_primary" />
+                <Button android:id="@+id/tracking_button" android:layout_width="0dp" android:layout_height="54dp" android:layout_weight="1" android:layout_marginLeft="6dp" android:background="@drawable/primary_button" android:text="暂停追踪" android:textAllCaps="false" android:textColor="@color/text_primary" />
+            </LinearLayout>
+
+            <Button android:id="@+id/arcore_button" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="12dp" android:background="@drawable/secondary_button" android:text="检测并启用 ARCore 6DoF" android:textAllCaps="false" android:textColor="@color/blue" />
+
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:gravity="center" android:text="Wi‑Fi ADB · WebSocket · 本地低延迟" android:textColor="#4E6487" android:textSize="10sp" />
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>
