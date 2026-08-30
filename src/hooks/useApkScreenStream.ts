@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { createScreenCanvas, drawContainedFrame, drawStatus, type ScreenStreamStatus } from './screenCanvas';
 
-export type ApkScreenStatus = 'waiting' | 'connecting' | 'streaming' | 'unsupported' | 'error';
+export type ApkScreenStatus = ScreenStreamStatus;
 
 interface VideoConfigMessage {
   type: 'video-config';
@@ -10,14 +11,23 @@ interface VideoConfigMessage {
   fps: number;
 }
 
-export function useApkScreenStream(onStatusChange?: (status: ApkScreenStatus) => void) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+export function useApkScreenStream(onStatusChange?: (status: ApkScreenStatus) => void, enabled = true) {
+  const [canvas] = useState(() => createScreenCanvas('apk'));
   const [status, setStatus] = useState<ApkScreenStatus>('waiting');
   const statusCallback = useRef(onStatusChange);
   statusCallback.current = onStatusChange;
 
   useEffect(() => {
+    if (!enabled) {
+      drawStatus(canvas, 'waiting', 'apk');
+      setStatus('waiting');
+      return;
+    }
+    let currentStatus: ApkScreenStatus = 'waiting';
     const updateStatus = (next: ApkScreenStatus) => {
+      if (currentStatus === next) return;
+      currentStatus = next;
+      if (next !== 'streaming') drawStatus(canvas, next, 'apk');
       setStatus(next);
       statusCallback.current?.(next);
     };
@@ -37,16 +47,12 @@ export function useApkScreenStream(onStatusChange?: (status: ApkScreenStatus) =>
     const decoder = new VideoDecoder({
       output: (frame) => {
         lastFrameAt = performance.now();
-        const canvas = canvasRef.current;
-        if (canvas) {
-          if (canvas.width !== frame.displayWidth || canvas.height !== frame.displayHeight) {
-            canvas.width = frame.displayWidth;
-            canvas.height = frame.displayHeight;
-          }
-          canvas.getContext('2d', { alpha: false })?.drawImage(frame, 0, 0, canvas.width, canvas.height);
+        try {
+          drawContainedFrame(canvas, frame, frame.displayWidth, frame.displayHeight);
           updateStatus('streaming');
+        } finally {
+          frame.close();
         }
-        frame.close();
       },
       error: () => {
         awaitingKeyFrame = true;
@@ -142,7 +148,7 @@ export function useApkScreenStream(onStatusChange?: (status: ApkScreenStatus) =>
       socket?.close();
       decoder.close();
     };
-  }, []);
+  }, [canvas, enabled]);
 
-  return { canvasRef, status };
+  return { canvas, status };
 }

@@ -1,4 +1,4 @@
-import { ContactShadows, Html, RoundedBox } from '@react-three/drei';
+import { ContactShadows, RoundedBox } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
@@ -10,11 +10,10 @@ interface TwinPhoneSceneProps {
   pose: MotionPose;
   poseEnabled: boolean;
   smoothing: number;
-  positionFollowEnabled: boolean;
-  movementGain: number;
   deviceId?: string;
   streaming: boolean;
   runtimeUrl: string;
+  connectionMode: 'apk' | 'usb';
   frameColor: 'emerald' | 'iceblue' | 'graphite' | 'gold' | 'silver';
   viewMode: 'live' | 'showcase';
   onApkScreenStatusChange?: (status: ApkScreenStatus) => void;
@@ -124,13 +123,10 @@ function RearDetails({ frameColor }: { frameColor: TwinPhoneSceneProps['frameCol
   );
 }
 
-function PhoneTwin({ pose, poseEnabled, smoothing, positionFollowEnabled, movementGain, deviceId, streaming, runtimeUrl, frameColor, viewMode, onApkScreenStatusChange }: TwinPhoneSceneProps) {
+function PhoneTwin({ pose, poseEnabled, smoothing, frameColor, viewMode, deviceId, streaming, connectionMode, onApkScreenStatusChange }: TwinPhoneSceneProps) {
   const phone = useRef<THREE.Group>(null);
   const stablePose = useRef(new THREE.Quaternion());
   const targetPose = useRef(new THREE.Quaternion());
-  const handoffOffset = useRef(new THREE.Quaternion());
-  const lastMode = useRef(pose.mode);
-  const identity = useMemo(() => new THREE.Quaternion(), []);
   const sensorWorldToThree = useMemo(() => new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0)), []);
   const displayTilt = useMemo(() => new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.045, 0.76, -0.025, 'YXZ')), []);
   const chassisGeometry = useMemo(() => {
@@ -157,24 +153,37 @@ function PhoneTwin({ pose, poseEnabled, smoothing, positionFollowEnabled, moveme
     roundedRectangle(shape, 1.472, 3.142, 0.136);
     return new THREE.ShapeGeometry(shape, 24);
   }, []);
+  const screenGeometry = useMemo(() => {
+    const width = 1.475;
+    const height = 3.145;
+    const shape = new THREE.Shape();
+    roundedRectangle(shape, width, height, 0.135);
+    const geometry = new THREE.ShapeGeometry(shape, 24);
+    const positions = geometry.getAttribute('position');
+    const uvs = geometry.getAttribute('uv');
+    for (let index = 0; index < positions.count; index += 1) {
+      uvs.setXY(
+        index,
+        (positions.getX(index) + width / 2) / width,
+        (positions.getY(index) + height / 2) / height,
+      );
+    }
+    uvs.needsUpdate = true;
+    return geometry;
+  }, []);
 
   useFrame((_, delta) => {
     if (!phone.current) return;
     const tracking = poseEnabled && (pose.tracking === 'TRACKING' || pose.tracking === 'LIMITED');
-    const incoming = new THREE.Quaternion(pose.rotation.x, pose.rotation.y, pose.rotation.z, pose.rotation.w).normalize();
-    if (pose.mode === 'SENSOR_3DOF') incoming.premultiply(sensorWorldToThree);
-
-    if (tracking && lastMode.current !== pose.mode && viewMode === 'live') {
-      handoffOffset.current.copy(phone.current.quaternion).multiply(incoming.clone().invert());
-      lastMode.current = pose.mode;
-    }
+    const incoming = new THREE.Quaternion(pose.rotation.x, pose.rotation.y, pose.rotation.z, pose.rotation.w)
+      .normalize()
+      .premultiply(sensorWorldToThree);
     if (tracking && stablePose.current.angleTo(incoming) > THREE.MathUtils.degToRad(0.3)) stablePose.current.copy(incoming);
 
     if (viewMode === 'showcase') {
       targetPose.current.copy(displayTilt);
     } else if (tracking) {
-      targetPose.current.copy(stablePose.current).premultiply(handoffOffset.current);
-      handoffOffset.current.slerp(identity, 1 - Math.exp(-4.5 * delta));
+      targetPose.current.copy(stablePose.current);
     } else {
       targetPose.current.identity();
     }
@@ -182,13 +191,9 @@ function PhoneTwin({ pose, poseEnabled, smoothing, positionFollowEnabled, moveme
     const response = THREE.MathUtils.lerp(17, 4.2, smoothing / 100);
     phone.current.quaternion.slerp(targetPose.current, 1 - Math.exp(-response * delta));
 
-    const moving = positionFollowEnabled && tracking && pose.mode === 'ARCORE_6DOF' && viewMode === 'live';
-    const tx = moving ? THREE.MathUtils.clamp(pose.position.x * movementGain, -0.95, 0.95) : 0;
-    const ty = moving ? THREE.MathUtils.clamp(-pose.position.y * movementGain * 0.82, -0.72, 0.72) : 0;
-    const tz = moving ? THREE.MathUtils.clamp(-pose.position.z * movementGain * 0.22, -0.25, 0.32) : 0;
-    phone.current.position.x = THREE.MathUtils.damp(phone.current.position.x, tx, response, delta);
-    phone.current.position.y = THREE.MathUtils.damp(phone.current.position.y, ty, response, delta);
-    phone.current.position.z = THREE.MathUtils.damp(phone.current.position.z, tz, response, delta);
+    phone.current.position.x = THREE.MathUtils.damp(phone.current.position.x, 0, response, delta);
+    phone.current.position.y = THREE.MathUtils.damp(phone.current.position.y, 0, response, delta);
+    phone.current.position.z = THREE.MathUtils.damp(phone.current.position.z, 0, response, delta);
   });
 
   const metal = FRAME_COLORS[frameColor];
@@ -213,11 +218,13 @@ function PhoneTwin({ pose, poseEnabled, smoothing, positionFollowEnabled, moveme
 
       <RearDetails frameColor={frameColor} />
 
-      <Html transform occlude position={[0, -0.016, 0.044]} scale={0.205} zIndexRange={[4, 0]}>
-        <div className="twin-screen-plane">
-          <MirrorScreen deviceId={deviceId} active={streaming} runtimeUrl={runtimeUrl} onApkStatusChange={onApkScreenStatusChange} />
-        </div>
-      </Html>
+      <MirrorScreen
+        geometry={screenGeometry}
+        deviceId={deviceId}
+        usbActive={streaming}
+        usbMode={connectionMode === 'usb'}
+        onScreenStatusChange={onApkScreenStatusChange}
+      />
 
       <RoundedBox args={[0.014, 0.38, 0.032]} radius={0.006} smoothness={6} position={[-0.787, 0.5, 0]}>
         <meshPhysicalMaterial color={metal} metalness={0.95} roughness={0.18} />

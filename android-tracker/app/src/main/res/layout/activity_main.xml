@@ -4,13 +4,6 @@
     android:layout_height="match_parent"
     android:background="@drawable/app_background">
 
-    <FrameLayout
-        android:id="@+id/ar_surface_container"
-        android:layout_width="2dp"
-        android:layout_height="2dp"
-        android:layout_gravity="bottom|end"
-        android:alpha="0.01" />
-
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -48,7 +41,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:text="正在连接电脑姿态通道…"
+                android:text="未连接 · 请扫码连接电脑"
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp" />
 
@@ -84,19 +77,39 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="7dp"
-                    android:text="扫码后自动请求屏幕录制权限"
+                    android:text="请先扫码连接电脑，再手动开始实时投屏"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
 
-                <Button
-                    android:id="@+id/screen_share_button"
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="46dp"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="13dp"
-                    android:background="@drawable/secondary_button"
-                    android:text="开始实时投屏"
-                    android:textAllCaps="false"
-                    android:textColor="@color/blue" />
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/screen_share_button"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_marginRight="6dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/primary_button"
+                        android:text="开始投屏"
+                        android:textAllCaps="false"
+                        android:textColor="@color/text_primary" />
+
+                    <Button
+                        android:id="@+id/stop_screen_share_button"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_marginLeft="6dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/secondary_button"
+                        android:enabled="false"
+                        android:text="停止投屏"
+                        android:textAllCaps="false"
+                        android:textColor="#C94D4D" />
+                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
@@ -121,9 +134,7 @@
                 android:layout_marginTop="12dp"
                 android:background="@drawable/card_background"
                 android:orientation="vertical">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="相对位置 / POSITION" android:textColor="@color/text_secondary" android:textSize="11sp" />
-                <TextView android:id="@+id/position_value" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:fontFamily="monospace" android:text="X  +0.000   Y  +0.000   Z  +0.000" android:textColor="@color/text_primary" android:textSize="15sp" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:text="旋转四元数 / QUATERNION" android:textColor="@color/text_secondary" android:textSize="11sp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="旋转四元数 / QUATERNION" android:textColor="@color/text_secondary" android:textSize="11sp" />
                 <TextView android:id="@+id/rotation_value" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:fontFamily="monospace" android:text="QX +0.000  QY +0.000\nQZ +0.000  QW +1.000" android:textColor="@color/text_primary" android:textSize="15sp" android:lineSpacingExtra="6dp" />
             </LinearLayout>
 
@@ -134,8 +145,7 @@
                 android:background="@drawable/card_background"
                 android:orientation="vertical">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="设备能力" android:textColor="@color/text_primary" android:textSize="15sp" android:textStyle="bold" />
-                <TextView android:id="@+id/sensor_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="✓ Rotation Vector\n✓ Gyroscope\n✓ Accelerometer" android:textColor="@color/text_secondary" android:textSize="13sp" android:lineSpacingExtra="6dp" />
-                <TextView android:id="@+id/arcore_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="ARCore：正在检测" android:textColor="@color/blue" android:textSize="12sp" />
+                <TextView android:id="@+id/sensor_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="✓ Rotation Vector\n✓ Gyroscope\n✓ Accelerometer\n姿态模式：Sensor 3DoF" android:textColor="@color/text_secondary" android:textSize="13sp" android:lineSpacingExtra="6dp" />
             </LinearLayout>
 
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="horizontal">
@@ -143,9 +153,7 @@
                 <Button android:id="@+id/tracking_button" android:layout_width="0dp" android:layout_height="54dp" android:layout_weight="1" android:layout_marginLeft="6dp" android:background="@drawable/primary_button" android:text="暂停追踪" android:textAllCaps="false" android:textColor="@color/text_primary" />
             </LinearLayout>
 
-            <Button android:id="@+id/arcore_button" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="12dp" android:background="@drawable/secondary_button" android:text="检测并启用 ARCore 6DoF" android:textAllCaps="false" android:textColor="@color/blue" />
-
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:gravity="center" android:text="Wi‑Fi ADB · WebSocket · 本地低延迟" android:textColor="#4E6487" android:textSize="10sp" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:gravity="center" android:text="Wi‑Fi · WebSocket · 本地低延迟" android:textColor="#4E6487" android:textSize="10sp" />
         </LinearLayout>
     </ScrollView>
 </FrameLayout>

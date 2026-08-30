@@ -50,7 +50,15 @@ try {
 
     if ($asset.digest -and $asset.digest.StartsWith('sha256:')) {
         $expectedHash = $asset.digest.Substring(7).ToUpperInvariant()
-        $actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToUpperInvariant()
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        $archiveStream = [System.IO.File]::OpenRead($archivePath)
+        try {
+            $actualHash = -join ($sha256.ComputeHash($archiveStream) | ForEach-Object { $_.ToString('X2') })
+        }
+        finally {
+            $archiveStream.Dispose()
+            $sha256.Dispose()
+        }
         if ($actualHash -ne $expectedHash) {
             throw "SHA-256 mismatch. Expected $expectedHash but got $actualHash."
         }

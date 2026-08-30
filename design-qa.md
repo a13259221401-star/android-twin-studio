@@ -22,7 +22,7 @@
 - After the correction, the same physical phone renders flat and the inspector reports pitch −90.53°, matching the visible orientation.
 - At pitch near ±90°, Euler yaw is mathematically unstable, so the displayed yaw value may change while flat even though the quaternion and rendered pose remain correct.
 - Rear-face verification screenshot: `E:\project\uav-system-ai\output\back-face-verification-v2.png`
-- Verification state: simulated ARCore 6DoF quaternion rotated 180° around Y at a 1440 × 1024 CSS-pixel viewport.
+- Verification state: simulated Sensor 3DoF quaternion rotated 180° around Y at a 1440 × 1024 CSS-pixel viewport.
 - The rear view is a continuous solid emerald surface; no `SCAN` placeholder or projected Android frame is visible through the back.
 
 ## Comparison history
@@ -30,10 +30,9 @@
 1. Full-quaternion zeroing pass:
    - P1: made the calibration pose front-facing regardless of gravity.
 2. Physical-coordinate correction:
-   - Restored yaw-only calibration in Sensor 3DoF and ARCore 6DoF.
+   - Restored yaw-only calibration in Sensor 3DoF.
    - Restored Android-to-Three basis conversion for Sensor 3DoF.
    - Removed presentation angle clamping from real-pose mode.
-   - Restored mode-handoff decay so ARCore/Sensor switching converges to the physical frame.
    - Updated the inspector to display rendered Euler angles.
 3. Post-fix browser evidence:
    - The connected phone was observed flat on the stage as a single thin profile.

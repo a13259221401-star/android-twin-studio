@@ -3,6 +3,7 @@ package com.motioncast.tracker;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -72,6 +73,7 @@ public final class ScreenCaptureService extends Service implements ScreenStreamC
     private int captureHeight;
     private boolean stopping;
     private boolean captureRunning;
+    private boolean streamConnected;
     private ResultReceiver statusReceiver;
 
     @Override public void onCreate() {
@@ -109,9 +111,8 @@ public final class ScreenCaptureService extends Service implements ScreenStreamC
 
         try {
             startCapture(resultCode, resultData);
-            captureRunning = true;
             getSharedPreferences("motioncast_capture", MODE_PRIVATE).edit().putBoolean("active", true).apply();
-            sendStatus(STATUS_RUNNING, "屏幕与姿态正在通过 Wi-Fi 同步");
+            sendStatus(STATUS_STARTING, "正在连接电脑画面通道，可随时停止投屏");
         } catch (Exception error) {
             String message = error.getMessage();
             failCapture(message == null || message.trim().isEmpty() ? "投屏启动失败，请重试" : "投屏启动失败：" + message);
@@ -119,13 +120,27 @@ public final class ScreenCaptureService extends Service implements ScreenStreamC
         return START_NOT_STICKY;
     }
 
+    @Override public void onTaskRemoved(Intent rootIntent) {
+        stopCapture();
+        super.onTaskRemoved(rootIntent);
+    }
+
     private void startProjectionForeground() {
+        Intent stopIntent = new Intent(this, ScreenCaptureService.class);
+        stopIntent.setAction(ACTION_STOP);
+        PendingIntent stopPendingIntent = PendingIntent.getService(
+            this,
+            NOTIFICATION_ID + 1,
+            stopIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.presence_video_online)
             .setContentTitle("MotionCast 正在实时投屏")
             .setContentText("屏幕和手机姿态正在同步到本地网页")
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .addAction(android.R.drawable.ic_media_pause, "停止投屏", stopPendingIntent)
             .build();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
@@ -210,7 +225,8 @@ public final class ScreenCaptureService extends Service implements ScreenStreamC
                 byte[] accessUnit = toAnnexB(encoded);
                 if (keyFrame) accessUnit = withParameterSets(accessUnit);
                 ScreenStreamClient client = streamClient;
-                if (client != null) client.sendVideoFrame(accessUnit, keyFrame, info.presentationTimeUs);
+                boolean delivered = client != null && client.sendVideoFrame(accessUnit, keyFrame, info.presentationTimeUs);
+                if (delivered && !captureRunning) mainHandler.post(ScreenCaptureService.this::markCaptureRunning);
             } finally {
                 try { codec.releaseOutputBuffer(index, false); } catch (Exception ignored) { }
             }
@@ -229,11 +245,15 @@ public final class ScreenCaptureService extends Service implements ScreenStreamC
     };
 
     @Override public void onStreamConnectionChanged(boolean connected) {
+        streamConnected = connected;
         if (connected) {
+            sendStatus(STATUS_STARTING, "电脑已连接，正在发送首帧…");
             ScreenStreamClient client = streamClient;
             if (client != null && captureWidth > 0) client.sendVideoConfig(captureWidth, captureHeight, FPS, BITRATE);
             requestKeyFrame();
         } else if (!stopping) {
+            captureRunning = false;
+            sendStatus(STATUS_STARTING, "电脑画面通道断开，正在自动重连…");
             mainHandler.postDelayed(() -> {
                 ScreenStreamClient current = streamClient;
                 if (!stopping && current != null) current.connect();
@@ -259,6 +279,12 @@ public final class ScreenCaptureService extends Service implements ScreenStreamC
             parameters.putInt(MediaCodec.PARAMETER_KEY_REQUEST_SYNC_FRAME, 0);
             current.setParameters(parameters);
         } catch (Exception ignored) { }
+    }
+
+    private void markCaptureRunning() {
+        if (stopping || !streamConnected || captureRunning) return;
+        captureRunning = true;
+        sendStatus(STATUS_RUNNING, "屏幕与姿态正在通过 Wi-Fi 同步");
     }
 
     private int[] captureSize() {
@@ -381,6 +407,7 @@ public final class ScreenCaptureService extends Service implements ScreenStreamC
         codecThread = null;
         if (streamClient != null) streamClient.close();
         streamClient = null;
+        streamConnected = false;
         csd0 = null;
         csd1 = null;
     }

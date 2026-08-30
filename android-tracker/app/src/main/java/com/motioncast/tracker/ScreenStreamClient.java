@@ -26,6 +26,7 @@ public final class ScreenStreamClient {
         .build();
     private final Listener listener;
     private WebSocket socket;
+    private boolean connected;
     private String endpoint;
     private String token;
     private long sequence;
@@ -43,6 +44,10 @@ public final class ScreenStreamClient {
         Request request = new Request.Builder().url(url).build();
         socket = client.newWebSocket(request, new WebSocketListener() {
             @Override public void onOpen(@NonNull WebSocket webSocket, @NonNull Response response) {
+                synchronized (ScreenStreamClient.this) {
+                    if (socket != webSocket) return;
+                    connected = true;
+                }
                 listener.onStreamConnectionChanged(true);
             }
 
@@ -70,12 +75,13 @@ public final class ScreenStreamClient {
     private synchronized void clearSocket(WebSocket webSocket) {
         if (socket == webSocket) {
             socket = null;
+            connected = false;
             listener.onStreamConnectionChanged(false);
         }
     }
 
     public synchronized void sendVideoConfig(int width, int height, int fps, int bitrate) {
-        if (socket == null) return;
+        if (socket == null || !connected) return;
         try {
             JSONObject payload = new JSONObject();
             payload.put("type", "video-config");
@@ -88,8 +94,8 @@ public final class ScreenStreamClient {
         } catch (JSONException ignored) { }
     }
 
-    public synchronized void sendVideoFrame(byte[] accessUnit, boolean keyFrame, long timestampUs) {
-        if (socket == null || accessUnit.length == 0) return;
+    public synchronized boolean sendVideoFrame(byte[] accessUnit, boolean keyFrame, long timestampUs) {
+        if (socket == null || !connected || accessUnit.length == 0) return false;
         ByteBuffer packet = ByteBuffer.allocate(16 + accessUnit.length).order(ByteOrder.BIG_ENDIAN);
         packet.put(MAGIC);
         packet.put((byte) 1);
@@ -97,11 +103,11 @@ public final class ScreenStreamClient {
         packet.putShort((short) 0);
         packet.putLong(timestampUs);
         packet.put(accessUnit);
-        socket.send(ByteString.of(packet.array()));
+        return socket.send(ByteString.of(packet.array()));
     }
 
     public synchronized void sendPose(MotionSample sample, float[] acceleration, float fps) {
-        if (socket == null) return;
+        if (socket == null || !connected) return;
         try {
             JSONObject payload = new JSONObject();
             payload.put("type", "pose");
@@ -125,6 +131,7 @@ public final class ScreenStreamClient {
     public synchronized void close() {
         WebSocket current = socket;
         socket = null;
+        connected = false;
         if (current != null) current.close(1000, "screen capture stopped");
         listener.onStreamConnectionChanged(false);
     }

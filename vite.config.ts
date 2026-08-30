@@ -1,6 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+const apiPort = Number(process.env.PHONE_MIRROR_API_PORT || 8787);
+const apiTarget = `http://127.0.0.1:${apiPort}`;
+const apiWebSocketTarget = `ws://127.0.0.1:${apiPort}`;
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -16,14 +20,14 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/pose': {
-        target: 'ws://127.0.0.1:8787',
+        target: apiWebSocketTarget,
         ws: true,
       },
       '/screen': {
-        target: 'ws://127.0.0.1:8787',
+        target: apiWebSocketTarget,
         ws: true,
       },
-      '/api': 'http://127.0.0.1:8787',
+      '/api': apiTarget,
       '/mirror-runtime': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,

@@ -102,16 +102,6 @@ button { cursor: pointer; }
 .inspector-footer span { display: flex; align-items: center; gap: 6px; }
 .inspector-footer span:last-child svg { color: #2eb878; }
 
-.twin-screen-plane { width: 292px; height: 614px; overflow: hidden; border-radius: 26px; background: #08090a; box-shadow: 0 0 0 1px rgba(5, 28, 21, .72), inset 0 0 0 1px rgba(255,255,255,.1); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-.twin-screen-content { width: 100%; height: 100%; position: relative; overflow: hidden; background: #070707; }
-.twin-screen-content iframe { width: 100%; height: 100%; display: block; border: 0; pointer-events: none; }
-.apk-screen { width: 100%; height: 100%; display: none; object-fit: contain; background: #050505; }
-.apk-screen.is-live { display: block; }
-.twin-screen-idle { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #262725; background: #f4f3ef; text-align: center; }
-.twin-screen-idle span { color: #2b78e4; font-size: 8px; letter-spacing: .16em; }
-.twin-screen-idle strong { color: #33332f; font-size: 25px; letter-spacing: .04em; }
-.twin-screen-idle small { max-width: 180px; color: #99968f; font-size: 8px; line-height: 1.55; }
-.twin-screen-loading { position: absolute; inset: 0; display: grid; place-items: center; color: #77746d; background: #f4f3ef; font-size: 9px; }
 .lab-toast { position: fixed; z-index: 120; left: 50%; bottom: 72px; transform: translateX(-50%); padding: 10px 14px; color: white; border-radius: 9px; background: rgba(42,42,39,.9); box-shadow: 0 12px 36px rgba(0,0,0,.16); font-size: 9px; backdrop-filter: blur(14px); }
 
 .connection-drawer { position: fixed; inset: 0; z-index: 100; display: flex; justify-content: flex-end; }
@@ -123,6 +113,22 @@ button { cursor: pointer; }
 .drawer-title strong { font-size: 19px; }
 .drawer-title > button { border: 0; color: #88857e; background: transparent; font-size: 25px; }
 .connection-card { padding: 16px; border: 1px solid #e1ded7; border-radius: 14px; background: white; }
+.transport-switcher { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: -4px -4px 14px; padding: 4px; border-radius: 12px; background: #eceae5; }
+.transport-switcher button { min-height: 54px; display: flex; align-items: center; gap: 9px; padding: 8px 10px; text-align: left; border: 1px solid transparent; border-radius: 9px; color: #77746e; background: transparent; }
+.transport-switcher button > span { display: grid; gap: 3px; }
+.transport-switcher strong { color: inherit; font-size: 9px; }
+.transport-switcher small { color: #99968f; font-size: 7px; }
+.transport-switcher button.active { color: #266bbf; border-color: #d6e2f2; background: #fff; box-shadow: 0 5px 15px rgba(39,74,116,.08); }
+.transport-switcher button.active.usb { color: #087cb9; border-color: #b8dced; background: linear-gradient(135deg, #fff 0%, #eef9fd 100%); }
+.usb-direct-card { position: relative; display: grid; grid-template-columns: 46px 1fr auto; align-items: center; gap: 10px; margin: -3px -4px 15px; padding: 15px; overflow: hidden; border: 1px solid #cce2eb; border-radius: 12px; background: #f2f9fb; }
+.usb-direct-card > div:nth-child(2) { display: grid; gap: 4px; }
+.usb-direct-card strong { color: #214a5d; font-size: 10px; }
+.usb-direct-card small { color: #71909e; font-size: 7px; line-height: 1.45; }
+.usb-direct-card > span { align-self: start; padding: 4px 6px; color: #8ca0a8; border-radius: 5px; background: #e5eef1; font: 600 6px/1 monospace; letter-spacing: .08em; }
+.usb-direct-card > span.ready { color: #087bb7; background: #d9f0f8; }
+.usb-cable-mark { width: 42px; height: 42px; display: grid; place-items: center; position: relative; color: #087cb9; border-radius: 11px; background: white; box-shadow: inset 0 0 0 1px #d7eaf1; }
+.usb-cable-mark i { position: absolute; width: 62px; left: 35px; bottom: 7px; border-top: 1px dashed #56a7c9; opacity: .55; animation: usb-signal 1.5s linear infinite; }
+@keyframes usb-signal { from { transform: translateX(-6px); } to { transform: translateX(6px); } }
 .quick-connect { display: grid; gap: 12px; margin: -4px -4px 15px; padding: 15px; border: 1px solid #dbe4f0; border-radius: 12px; background: #f5f8fc; }
 .quick-connect-copy { display: flex; align-items: center; gap: 10px; }
 .quick-connect-copy > div { display: grid; gap: 3px; }
@@ -159,6 +165,10 @@ button { cursor: pointer; }
 .connection-notice { min-height: 16px; margin: 9px 0; line-height: 1.5; }
 .primary-button { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 13px; }
 .drawer-note { margin-top: 12px; padding: 11px; color: #85827b; border-radius: 8px; background: #eeece7; font-size: 8px; line-height: 1.55; }
+
+@media (prefers-reduced-motion: reduce) {
+  .usb-cable-mark i { animation: none; }
+}
 
 @media (max-width: 960px) {
   body { overflow: auto; }

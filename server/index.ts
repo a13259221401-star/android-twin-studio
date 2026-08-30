@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocket, WebSocketServer } from 'ws';
 import { extractWlanAddress, listDevices, runAdb, validateEndpoint } from './adb.js';
+import { startMirrorRuntime } from './runtime.js';
 
 const app = express();
 const port = Number(process.env.PHONE_MIRROR_API_PORT || 8787);
@@ -21,7 +22,6 @@ const publisherLastSeen = new Map<WebSocket, number>();
 const quickConnectToken = randomBytes(18).toString('base64url');
 let latestPose: unknown = null;
 let latestVideoConfig: string | null = null;
-let lastArCorePoseAt = 0;
 let lastPoseAt = 0;
 let lastVideoFrameAt = 0;
 let videoLive = false;
@@ -89,6 +89,19 @@ app.get('/api/runtime', async (_request, response) => {
     }
   }
   response.json({ ready: false, url: `http://127.0.0.1:${configuredPort || 8000}` });
+});
+
+app.post('/api/runtime/start', async (_request, response) => {
+  try {
+    const output = await startMirrorRuntime(root);
+    response.json({ ok: true, message: output || 'USB 投屏运行时已启动' });
+  } catch (error) {
+    response.status(503).json({
+      message: error instanceof Error
+        ? `${error.message}。请先执行 npm run runtime:install`
+        : 'USB 投屏运行时启动失败',
+    });
+  }
 });
 
 app.get('/api/devices', async (_request, response) => {
@@ -227,16 +240,12 @@ function handlePoseConnection(webSocket: WebSocket, role: string, source = 'unkn
         broadcastScreen(serialized);
         return;
       }
-      const now = Date.now();
-      const isTrackedArCore = message.type === 'pose' && message.mode === 'ARCORE_6DOF' && message.tracking === 'TRACKING';
-      if (isTrackedArCore) lastArCorePoseAt = now;
       const projectionAvailable = [...publisherSources.entries()].some(([publisher, publisherSource]) =>
         publisher !== webSocket && publisherSource === 'projection' && publisher.readyState === WebSocket.OPEN
       );
-      if (!isTrackedArCore && now - lastArCorePoseAt < 650) return;
-      if (message.type === 'pose' && source === 'activity' && projectionAvailable && !isTrackedArCore) return;
+      if (message.type === 'pose' && source === 'activity' && projectionAvailable) return;
       latestPose = message;
-      lastPoseAt = now;
+      lastPoseAt = Date.now();
       broadcastPose(serialized);
     } catch {
       webSocket.send(JSON.stringify({ type: 'error', message: 'invalid pose payload' }));

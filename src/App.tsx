@@ -7,6 +7,7 @@ import {
   GearSix,
   QrCode,
   SlidersHorizontal,
+  Usb,
   WifiHigh,
 } from '@phosphor-icons/react';
 import { ConnectionPanel } from './components/ConnectionPanel';
@@ -17,20 +18,20 @@ import { mirrorApi } from './lib/api';
 
 type FrameColor = 'emerald' | 'iceblue' | 'graphite' | 'gold' | 'silver';
 type PoseViewMode = 'live' | 'showcase';
+type ConnectionMode = 'apk' | 'usb';
 
 function App() {
   const [deviceId, setDeviceId] = useState<string>();
   const [streaming, setStreaming] = useState(false);
+  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('apk');
   const [runtimeReady, setRuntimeReady] = useState(false);
   const [runtimeUrl, setRuntimeUrl] = useState('http://127.0.0.1:8000');
   const [poseEnabled] = useState(true);
   const [poseViewMode, setPoseViewMode] = useState<PoseViewMode>('live');
   const [smoothing, setSmoothing] = useState(72);
-  const [positionFollowEnabled, setPositionFollowEnabled] = useState(true);
-  const [movementGain, setMovementGain] = useState(2.8);
   const [frameColor, setFrameColor] = useState<FrameColor>('emerald');
   const [showConnections, setShowConnections] = useState(false);
-  const [apkScreenStatus, setApkScreenStatus] = useState<ApkScreenStatus>('waiting');
+  const [screenStatus, setScreenStatus] = useState<ApkScreenStatus>('waiting');
   const [notice, setNotice] = useState('');
   const [calibrating, setCalibrating] = useState(false);
   const { pose, connected: poseConnected, latency } = useMotionPose();
@@ -49,18 +50,39 @@ function App() {
   const changeStreaming = async (next: boolean) => {
     if (!next) {
       setStreaming(false);
+      setScreenStatus('waiting');
+      return;
+    }
+    if (connectionMode !== 'usb') {
+      setShowConnections(true);
       return;
     }
     if (!deviceId) {
       setShowConnections(true);
       return;
     }
-    try { await mirrorApi.preparePose(deviceId); } catch { /* APK direct stream does not require ADB reverse. */ }
-    const status = runtimeReady ? { ready: true, url: runtimeUrl } : await mirrorApi.runtime();
+    setScreenStatus('connecting');
+    let status = runtimeReady ? { ready: true, url: runtimeUrl } : await mirrorApi.runtime();
+    if (!status.ready) {
+      try {
+        await mirrorApi.startRuntime();
+        status = await mirrorApi.runtime();
+      } catch (error) {
+        setScreenStatus('error');
+        setNotice(error instanceof Error ? error.message : 'USB 投屏运行时启动失败');
+        return;
+      }
+    }
     setRuntimeReady(status.ready);
     setRuntimeUrl(status.url);
     if (status.ready) setStreaming(true);
-    else setNotice('本地 ADB 投屏运行时未启动；仍可使用 APK 扫码直连');
+    else setNotice('USB 投屏运行时未就绪，请执行 npm run runtime:install');
+  };
+
+  const changeConnectionMode = (next: ConnectionMode) => {
+    setStreaming(false);
+    setScreenStatus('waiting');
+    setConnectionMode(next);
   };
 
   const calibrate = async () => {
@@ -82,10 +104,11 @@ function App() {
     }
   };
 
-  const apkScreenLive = apkScreenStatus === 'streaming';
-  const connected = apkScreenLive || poseConnected;
-  const connectionLabel = apkScreenLive
-    ? '画面在线'
+  const screenLive = screenStatus === 'streaming';
+  const usbScreenLive = connectionMode === 'usb' && screenLive;
+  const connected = screenLive || poseConnected;
+  const connectionLabel = screenLive
+    ? usbScreenLive ? 'USB 画面在线' : '画面在线'
     : poseConnected
       ? '姿态在线'
       : streaming
@@ -111,27 +134,26 @@ function App() {
       </header>
 
       <section id="studio" className="lab-stage" aria-label="Android 实时数字孪生舞台">
-        <div className={`live-chip ${connected ? 'online' : ''}`}><i />{apkScreenLive ? '实时画面' : poseConnected ? '姿态同步' : '等待手机'}</div>
+        <div className={`live-chip ${connected ? 'online' : ''}`}><i />{usbScreenLive ? 'USB 有线画面' : screenLive ? '实时画面' : poseConnected ? '姿态同步' : '等待手机'}</div>
         <div className="height-ruler" aria-hidden="true"><span>2m</span><span>1m</span><span>0m</span><span>−1m</span></div>
         <TwinPhoneScene
           pose={pose}
           poseEnabled={poseEnabled && poseConnected}
           smoothing={smoothing}
-          positionFollowEnabled={positionFollowEnabled}
-          movementGain={movementGain}
           deviceId={deviceId}
           streaming={streaming}
           runtimeUrl={runtimeUrl}
+          connectionMode={connectionMode}
           frameColor={frameColor}
           viewMode={poseViewMode}
-          onApkScreenStatusChange={setApkScreenStatus}
+          onApkScreenStatusChange={setScreenStatus}
         />
         <div className="stage-statusbar">
-          <span>帧率 <b>{apkScreenLive ? '60' : Math.round(pose.fps || 0)} FPS</b></span>
+          <span>帧率 <b>{screenLive ? '30' : Math.round(pose.fps || 0)} FPS</b></span>
           <span>延迟 <b>{poseConnected ? latency : '--'} ms</b><i className={poseConnected ? 'online' : ''} /></span>
-          <span>分辨率 <b>{apkScreenLive || streaming ? '1080 × 2400' : '--'}</b></span>
+          <span>分辨率 <b>{usbScreenLive ? '最高 1920p' : screenLive ? '1080 × 2400' : '--'}</b></span>
         </div>
-        <div className="stage-caption">6DoF 实时数字孪生</div>
+        <div className="stage-caption">{connectionMode === 'usb' ? 'USB · ADB 有线低延迟' : '3DoF 实时姿态同步'}</div>
       </section>
 
       <aside className="pose-inspector" aria-label="姿态控制">
@@ -152,16 +174,7 @@ function App() {
         <p className="zero-help">校准只归零水平朝向，不改变重力决定的俯仰与翻转；手机平放时，网页也会保持平放。</p>
 
         <section className="inspector-section quality-row">
-          <span>姿态质量</span><strong className={pose.tracking === 'TRACKING' ? 'good' : ''}><i />{poseQuality} · {pose.mode === 'ARCORE_6DOF' ? '6DoF' : '3DoF'}</strong>
-        </section>
-
-        <section className="inspector-section">
-          <h2>位置 <small>(m)</small></h2>
-          <dl className="value-list">
-            <div><dt>x</dt><dd>{pose.position.x.toFixed(3)}</dd></div>
-            <div><dt>y</dt><dd>{pose.position.y.toFixed(3)}</dd></div>
-            <div><dt>z</dt><dd>{pose.position.z.toFixed(3)}</dd></div>
-          </dl>
+          <span>姿态质量</span><strong className={pose.tracking === 'TRACKING' ? 'good' : ''}><i />{poseQuality} · 3DoF</strong>
         </section>
 
         <section className="inspector-section">
@@ -175,28 +188,14 @@ function App() {
 
         <section className="inspector-section compact-controls">
           <label><span>稳定度 <b>{smoothing}%</b></span><input type="range" min="20" max="92" value={smoothing} onChange={(event) => setSmoothing(Number(event.target.value))} /></label>
-          <div className="follow-control">
-            <span><b>真实位移</b><small>ARCore 6DoF</small></span>
-            <button
-              type="button"
-              className={positionFollowEnabled ? 'active' : ''}
-              aria-pressed={positionFollowEnabled}
-              onClick={() => setPositionFollowEnabled((value) => !value)}
-            ><i /></button>
-          </div>
-          <label className={!positionFollowEnabled ? 'disabled-control' : ''}>
-            <span>位移灵敏度 <b>{movementGain.toFixed(1)}×</b></span>
-            <input type="range" min="1" max="4" step="0.1" disabled={!positionFollowEnabled} value={movementGain} onChange={(event) => setMovementGain(Number(event.target.value))} />
-          </label>
-          <p className="follow-help">左右、升降和远近跟随仅在 Tracker 前台的 ARCore 6DoF 模式生效；切到其他 App 后会保留旋转，但暂停真实位移。</p>
           <div className="frame-row"><span>机身</span><div>{(['emerald', 'silver', 'graphite', 'iceblue', 'gold'] as const).map((color) => <button key={color} className={`${color} ${frameColor === color ? 'selected' : ''}`} onClick={() => setFrameColor(color)} aria-label={`选择 ${color} 机身`} />)}</div></div>
         </section>
 
-        <button className="mirror-button" onClick={() => apkScreenLive ? setShowConnections(true) : void changeStreaming(!streaming)}>
+        <button className="mirror-button" onClick={() => connectionMode === 'usb' ? void changeStreaming(!streaming) : setShowConnections(true)}>
           <DeviceMobile size={17} weight="duotone" />
-          {apkScreenLive ? '管理手机连接' : streaming ? '停止 ADB 镜像' : '连接实时画面'}
+          {connectionMode === 'usb' ? streaming ? '停止 USB 投屏' : '开始 USB 投屏' : '管理手机连接'}
         </button>
-        <footer className="inspector-footer"><span><WifiHigh size={14} />{apkScreenLive ? 'APK Wi‑Fi 直连' : streaming ? 'ADB Wi‑Fi' : '本地网络'}</span><span><CheckCircle size={14} weight="fill" />数据仅在局域网传输</span></footer>
+        <footer className="inspector-footer"><span>{connectionMode === 'usb' ? <Usb size={14} /> : <WifiHigh size={14} />}{connectionMode === 'usb' ? 'USB · ADB 有线' : screenLive ? 'APK Wi‑Fi 直连' : '本地网络'}</span><span><CheckCircle size={14} weight="fill" />{connectionMode === 'usb' ? '画面仅在本机传输' : '数据仅在局域网传输'}</span></footer>
       </aside>
 
       {notice ? <div className="lab-toast">{notice}</div> : null}
@@ -206,8 +205,15 @@ function App() {
           <button className="drawer-backdrop" aria-label="关闭连接中心" onClick={() => setShowConnections(false)} />
           <div className="drawer-panel">
             <div className="drawer-title"><div><span>DEVICE LINK</span><strong>连接 Android 手机</strong></div><button onClick={() => setShowConnections(false)}>×</button></div>
-            <ConnectionPanel selected={deviceId} onSelect={setDeviceId} streaming={streaming} onStreamingChange={(next) => void changeStreaming(next)} />
-            <div className="drawer-note">推荐使用 MotionCast Tracker 扫码并允许录屏；画面与姿态会通过同一条 Wi‑Fi 连接自动进入网页。</div>
+            <ConnectionPanel
+              selected={deviceId}
+              onSelect={setDeviceId}
+              streaming={streaming}
+              onStreamingChange={(next) => void changeStreaming(next)}
+              connectionMode={connectionMode}
+              onConnectionModeChange={changeConnectionMode}
+            />
+            <div className="drawer-note">{connectionMode === 'usb' ? 'USB 模式需要在手机开发者选项中开启 USB 调试，并在手机上允许当前电脑调试。' : 'Tracker 模式通过同一 Wi‑Fi 传输画面与姿态；每次重新打开 APP 都需要重新扫码。'}</div>
           </div>
         </div>
       ) : null}

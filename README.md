@@ -1,12 +1,13 @@
 # Android Twin Studio：实时手机数字孪生 Demo
 
-一个本地运行的完整演示：MotionCast Tracker APK 通过 Wi-Fi 同时发送 Android 真机屏幕和手机姿态，网页将实时画面贴到可自由观察的 3D 手机模型上。
+一个本地运行的完整演示：既支持 MotionCast Tracker APK 通过 Wi-Fi 同时发送真机屏幕和手机姿态，也支持通过 USB + ADB 低延迟投屏；网页会将实时画面贴到可自由观察的 3D 手机模型上。
 
 ## 架构
 
 ```text
 Android 屏幕 → MediaProjection → MediaCodec H.264 → Wi-Fi WebSocket → WebCodecs → 3D 屏幕平面
-Android 姿态 → Tracker APK Sensor / ARCore → 同一局域网连接 → Three.js Quaternion
+Android 屏幕 → USB 调试 → ADB + scrcpy → 隐藏解码画布 → CanvasTexture → 3D 屏幕平面
+Android 姿态 → Tracker APK Sensor 3DoF → 同一局域网连接 → Three.js Quaternion
 网页控制台 → 机身材质 / 镜头视角 / 平滑度 / 背景 / 演示模式
 ```
 
@@ -15,8 +16,9 @@ Android 姿态 → Tracker APK Sensor / ARCore → 同一局域网连接 → Thr
 - 连接：同一局域网内扫码，二维码携带进程级随机令牌，不需要输入 IP 或端口。
 - 主投屏通道：APK 使用 MediaProjection + MediaCodec，长边最高 1920、30fps、8Mbps。
 - 浏览器：WebCodecs 解码 Annex B H.264，Canvas 直接渲染进 3D 手机屏幕。
-- 兼容通道：原有 Wi-Fi ADB + ws-scrcpy-web 保留为高级备用方式。
-- 姿态：支持 `GAME_ROTATION_VECTOR` 3DoF；支持 ARCore 的设备可启用 6DoF。
+- USB 通道：ADB + ws-scrcpy-web 有线传输，最高长边 1920、30fps，画面仅在本机处理。
+- 兼容通道：原有 Wi-Fi ADB 仍保留为高级备用方式。
+- 姿态：使用 `GAME_ROTATION_VECTOR` Sensor 3DoF，同步 Pitch、Yaw、Roll。
 
 ## 已构建 APK
 
@@ -80,11 +82,12 @@ npm run demo
 
 1. 手机和电脑连接同一 Wi-Fi。
 2. 打开网页“连接 Android 手机”，页面会显示当前电脑的连接二维码。
-3. 安装并打开 MotionCast Tracker 2.0，点击“扫码连接电脑”。
+3. 安装并打开 MotionCast Tracker 2.2.2，点击“扫码连接电脑”。
 4. 扫描网页二维码。
-5. Android 自动弹出“开始录制或投射”系统确认框，点击允许。
-6. 手机屏幕和姿态会自动出现在网页 3D 手机中，不需要再点击开始投屏。
-7. 拿稳手机后执行一次“重置至初始姿态”。
+5. 等待 APP 显示电脑已连接，点击“开始实时投屏”。
+6. Android 弹出“开始录制或投射”系统确认框，点击允许。
+7. 手机屏幕和姿态会出现在网页 3D 手机中；需要结束时点击“停止实时投屏”。
+8. 拿稳手机后执行一次“重置至初始姿态”。
 
 电脑端服务重启后二维码令牌会更新，重新扫描一次即可。整个过程不需要手动输入电脑 IP、WebSocket 端口或令牌。
 
@@ -102,7 +105,23 @@ npm run demo
 4. 返回无线调试主页；若自动发现暂时不可用，可在“Wi-Fi 连接”中输入一次当前连接地址。
 5. 后续直接点击“自动发现投屏设备”。
 
-### USB 转 Wi-Fi
+### USB 有线投屏
+
+首次使用先安装本地 USB 投屏运行时：
+
+```powershell
+npm run runtime:install
+```
+
+1. 手机进入开发者选项，开启“USB 调试”。
+2. 使用数据线连接电脑，在手机授权弹窗中点击“允许”。
+3. 打开网页连接中心，选择顶部“USB 有线”。
+4. 选择已识别的 USB 手机，点击“开始 USB 投屏”。
+5. 点击“停止 USB 投屏”会立即关闭隐藏解码通道并释放 scrcpy 会话。
+
+USB 模式不需要安装 Tracker APK；它只传输屏幕，不提供手机传感器 3DoF 姿态。
+
+### USB 转 Wi-Fi 调试
 
 1. USB 连接手机并允许调试。
 2. 网页展开“高级连接方式 → USB 转 Wi-Fi”。
@@ -110,7 +129,7 @@ npm run demo
 
 ## 操作说明
 
-姿态校准时只需保持手机静止约 1 秒，不要求平放。新版校准只归零水平航向，不会清除由重力决定的俯仰和翻转：手机平放时网页也会平放，竖直拿起时网页才会竖直。系统会连续采集稳定样本，并自动过滤约 0.28° 内的微小旋转噪声。投屏服务与前台 ARCore 同时在线时，服务端只选用一个姿态源：ARCore `TRACKING` 优先，离开 Tracker 后由后台 Sensor 3DoF 接管；网页会对追踪源切换做短暂连续性补偿。
+姿态校准时只需保持手机静止约 1 秒，不要求平放。校准只归零水平航向，不会清除由重力决定的俯仰和翻转：手机平放时网页也会平放，竖直拿起时网页才会竖直。系统会连续采集稳定样本，并自动过滤约 0.28° 内的微小旋转噪声。开始投屏后由前台服务继续发布 Sensor 3DoF 姿态，因此切换到其他 App 后仍可同步旋转。
 
 - “真实姿态 / 展示姿态”：切换物理同步与固定产品展示角度。
 - “稳定度”：建议 65%–80%，越高越稳定但响应略慢。
@@ -120,6 +139,7 @@ npm run demo
 
 - `GET /api/devices`：列出 ADB 设备。
 - `GET /api/runtime`：检查 ws-scrcpy-web 是否可用。
+- `POST /api/runtime/start`：启动已安装的本地 USB/scrcpy 投屏运行时；未安装时返回明确错误。
 - `GET /api/pose`：查看 Tracker APK 连接状态与最新 Pose。
 - `GET /api/quick-connect`：生成局域网 WebSocket 地址和临时令牌。
 - `POST /api/pose/prepare`：为指定设备建立兼容的本机反向姿态端口。
@@ -134,9 +154,8 @@ ADB 参数使用 `execFile` 参数数组执行，连接地址、端口和设备�
 ## 能力边界
 
 - Sensor 3DoF 稳定同步 Pitch、Yaw、Roll。
-- ARCore 6DoF 可提供 X/Y/Z 空间位移，但要求设备支持 ARCore 且摄像头保持追踪。
 - 切换到其他 App 后，前台服务继续发送屏幕和 Sensor 3DoF 姿态。
-- ARCore 6DoF 依赖 Tracker 的前台相机追踪；切到其他 App 后会降级为 Sensor 3DoF，因此可继续同步旋转但不保证真实 X/Y/Z 位移。
+- Sensor 3DoF 不提供可靠的 X/Y/Z 空间位移；左右移动需要额外的视觉定位或外部追踪方案。
 - Android 系统录屏授权必须由用户在系统弹窗中确认。
 
 ## 许可证

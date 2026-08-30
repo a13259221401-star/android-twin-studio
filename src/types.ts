@@ -39,7 +39,7 @@ export interface MotionPose {
   seq: number;
   timestamp: number;
   tracking: 'TRACKING' | 'LIMITED' | 'CALIBRATING' | 'STOPPED';
-  mode: 'ARCORE_6DOF' | 'SENSOR_3DOF';
+  mode: 'SENSOR_3DOF';
   position: { x: number; y: number; z: number };
   rotation: { x: number; y: number; z: number; w: number };
   acceleration?: { x: number; y: number; z: number };

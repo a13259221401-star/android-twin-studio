@@ -18,6 +18,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 export const mirrorApi = {
   devices: () => request<DeviceResponse>('/api/devices'),
   runtime: () => request<RuntimeStatus>('/api/runtime'),
+  startRuntime: () => request<ActionResponse>('/api/runtime/start', { method: 'POST' }),
   quickConnect: () => request<QuickConnectInfo>('/api/quick-connect'),
   autoConnect: () => request<ActionResponse>('/api/adb/auto-connect', { method: 'POST' }),
   connect: (address: string) =>

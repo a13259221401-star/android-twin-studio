@@ -19,6 +19,8 @@ Thumbs.db
 
 # Android machine-specific and generated files
 android-tracker/.gradle/
+android-tracker/.gradle-user-home/
+.gradle-user-home/
 android-tracker/**/build/
 android-tracker/local.properties
 
